@@ -2,132 +2,59 @@
 
 ## Objective
 
-The objective of this exercise was to simulate a SQL Injection attack against the Damn Vulnerable Web Application (DVWA) and investigate how Wazuh detects malicious HTTP requests through Apache log monitoring.
+The objective of this exercise was to simulate a SQL Injection attack against the Damn Vulnerable Web Application (DVWA) and investigate how Wazuh detects malicious web requests through Apache log monitoring.
+
+This exercise demonstrates how vulnerable web applications can be exploited through unsanitized user input and how Security Information and Event Management (SIEM) solutions can detect and investigate these attacks using centralized log collection.
 
 ---
 
-# Lab Setup
+# Background
 
-Attacker
+SQL Injection (SQLi) is one of the most common web application vulnerabilities.
 
-- Kali Linux
+It occurs when user input is directly incorporated into SQL queries without proper validation or parameterization.
 
-Target
+Instead of treating the input as data, the database interprets it as SQL commands.
 
-- Ubuntu DVWA
-
-Monitoring
-
-- Wazuh Agent
-- Wazuh Manager
-- Wazuh Dashboard
-
----
-
-# Attack Description
-
-SQL Injection occurs when an application accepts untrusted user input and directly includes it in a SQL query without proper validation.
-
-Attackers exploit this weakness to:
+Successful SQL Injection attacks may allow attackers to:
 
 - Bypass authentication
-- Retrieve database information
+- Read sensitive database information
 - Modify records
 - Delete data
+- Escalate privileges
+- Execute administrative database commands
 
-DVWA intentionally contains this vulnerability for security training.
-
----
-
-# Attack Steps
-
-1. Open DVWA.
-2. Login.
-3. Navigate to
-
-```
-DVWA → SQL Injection
-```
-
-4. Enter the payload
-
-```
-'1'
-```
-
-5. Submit the request.
+DVWA intentionally contains this vulnerability for educational purposes.
 
 ---
 
-# Apache Log Evidence
+# Lab Environment
 
-Example
-
-```
-GET /DVWA/vulnerabilities/sqli/?id='1'&Submit=Submit HTTP/1.1
-```
-
-Apache recorded the request inside
-
-```
-/var/log/apache2/other_vhosts_access.log
-```
+| Component | Purpose |
+|-----------|---------|
+| Kali Linux | Attacker Machine |
+| Ubuntu DVWA | Vulnerable Web Application |
+| Apache2 | Web Server |
+| Wazuh Agent | Endpoint Monitoring |
+| Wazuh Manager | SIEM |
+| Wazuh Dashboard | Security Investigation |
 
 ---
 
-# Wazuh Detection
-
-The Wazuh Agent collected the Apache log and forwarded it to the Wazuh Manager.
-
-The built-in detection engine matched:
-
-Rule ID
+# Attack Workflow
 
 ```
-31164
-```
 
-Description
+Kali Linux
 
-```
-SQL injection attempt
-```
+↓
 
-Severity
+DVWA SQL Injection Module
 
-```
-6
-```
+↓
 
----
-
-# Dashboard Investigation
-
-Inside the Wazuh Dashboard the following information was visible:
-
-- Timestamp
-- Source IP
-- Target Agent
-- Rule ID
-- Rule Description
-- Severity
-- Apache Request
-
-This confirmed successful end-to-end detection.
-
----
-
-# MITRE ATT&CK
-
-| Technique | ID |
-|-----------|-----|
-| Exploit Public-Facing Application | T1190 |
-
----
-
-# Detection Flow
-
-Attack
+Apache Web Server
 
 ↓
 
@@ -143,38 +70,205 @@ Wazuh Manager
 
 ↓
 
-Rule 31164
+Detection Rule 31164
 
 ↓
 
-Alert
+Dashboard Alert
 
-↓
-
-Dashboard
+```
 
 ---
 
-# Outcome
+# Attack Procedure
 
-✅ SQL Injection generated
+## Step 1
 
-✅ Apache log collected
+Login to DVWA.
 
-✅ Wazuh detected attack
+---
 
-✅ Dashboard alert generated
+## Step 2
 
-✅ Attack investigated
+Navigate to
+
+```
+
+DVWA → SQL Injection
+
+```
+
+---
+
+## Step 3
+
+Enter the following payload into the User ID field:
+
+```
+
+'1'
+
+```
+
+Alternative payloads tested included:
+
+```
+
+' OR '1'='1
+
+```
+
+and
+
+```
+
+'1'
+
+```
+
+---
+
+## Step 4
+
+Submit the request.
+
+DVWA processed the request and generated an HTTP request containing the SQL Injection payload.
+
+---
+
+# Apache Log Evidence
+
+Apache recorded the request inside:
+
+```
+
+/var/log/apache2/other_vhosts_access.log
+
+```
+
+Example log entry:
+
+```
+
+GET /DVWA/vulnerabilities/sqli/?id=%271%27&Submit=Submit HTTP/1.1
+
+```
+
+The log captured:
+
+- Timestamp
+- Source IP
+- HTTP Method
+- Requested URL
+- SQL Injection payload
+- User Agent
+
+---
+
+# Wazuh Detection
+
+The Wazuh Agent continuously monitored Apache logs and forwarded them to the Wazuh Manager.
+
+The built-in rule engine detected the malicious request.
+
+Alert Details
+
+Rule ID
+
+```
+
+31164
+
+```
+
+Description
+
+```
+
+SQL Injection attempt
+
+```
+
+Severity
+
+```
+
+6
+
+```
+
+---
+
+# Dashboard Investigation
+
+The alert appeared within the Wazuh Dashboard.
+
+Information available included:
+
+- Timestamp
+- Source IP
+- Target Agent
+- Rule ID
+- Rule Description
+- Severity Level
+- Complete Apache Request
+- Log Source
+
+This confirmed successful end-to-end detection.
+
+---
+
+# Investigation Process
+
+The attack was investigated by:
+
+- Reviewing Apache access logs
+- Verifying Wazuh log collection
+- Confirming Rule 31164 triggered
+- Reviewing Security Events
+- Analysing the request URL
+- Identifying the attacking IP address
+
+---
+
+# MITRE ATT&CK Mapping
+
+| Technique | ID |
+|-----------|----|
+| Exploit Public-Facing Application | T1190 |
+
+---
+
+# Security Recommendations
+
+SQL Injection can be prevented by:
+
+- Parameterized queries
+- Prepared statements
+- Input validation
+- Least privilege database accounts
+- Stored procedures
+- Web Application Firewalls (WAF)
+- Continuous log monitoring
+
+---
+
+# Skills Demonstrated
+
+This exercise demonstrated practical experience with:
+
+- SQL Injection testing
+- Apache log analysis
+- SIEM investigation
+- Detection engineering
+- Threat hunting
+- Wazuh Dashboard analysis
+- Web application security
 
 ---
 
 # Lessons Learned
 
-This exercise demonstrated:
+This exercise demonstrated how SQL Injection attempts can be successfully detected through Apache log monitoring and Wazuh's built-in detection rules.
 
-- Apache log monitoring
-- Wazuh rule processing
-- Web attack detection
-- Alert investigation
-- SOC analyst workflow
+By investigating both raw web server logs and SIEM alerts, the attack lifecycle could be reconstructed from initial exploitation to alert generation. This highlights the importance of centralized logging and rule-based detection for identifying web application attacks.
