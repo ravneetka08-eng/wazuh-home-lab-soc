@@ -2,33 +2,25 @@
 
 ## Objective
 
-The objective of this exercise was to simulate a Reflected Cross-Site Scripting (XSS) attack against DVWA and evaluate how Wazuh processes and detects malicious web requests.
+The objective of this exercise was to simulate a Reflected Cross-Site Scripting (XSS) attack against DVWA and investigate how malicious JavaScript payloads can be identified using Apache logs and Wazuh.
+
+The exercise also included validating a custom Wazuh detection rule using **wazuh-logtest**.
 
 ---
 
-# Lab Setup
+# Background
 
-Attacker
+Cross-Site Scripting (XSS) occurs when a web application returns untrusted user input to a user's browser without proper sanitization.
 
-- Kali Linux
+Instead of displaying the input as text, the browser interprets it as executable JavaScript.
 
-Target
+There are three common types of XSS:
 
-- Ubuntu DVWA
+- Reflected XSS
+- Stored XSS
+- DOM-based XSS
 
-Monitoring
-
-- Wazuh Agent
-- Wazuh Manager
-- Wazuh Dashboard
-
----
-
-# Attack Description
-
-Cross-Site Scripting (XSS) occurs when a web application accepts untrusted input and returns it to the browser without proper sanitization.
-
-An attacker can inject JavaScript into a vulnerable page.
+This lab focused on Reflected XSS.
 
 Possible impacts include:
 
@@ -36,32 +28,151 @@ Possible impacts include:
 - Cookie theft
 - Credential theft
 - Browser redirection
+- Phishing
 - Defacement
 
 ---
 
-# Attack Steps
+# Lab Environment
 
-1. Login to DVWA.
-2. Navigate to:
+| Component | Purpose |
+|-----------|---------|
+| Kali Linux | Attacker Machine |
+| Ubuntu DVWA | Vulnerable Web Application |
+| Apache2 | Web Server |
+| Wazuh Agent | Endpoint Monitoring |
+| Wazuh Manager | SIEM |
+| Wazuh Dashboard | Investigation |
+
+---
+
+# Attack Workflow
+
+```
+
+Kali Linux
+
+↓
+
+DVWA Reflected XSS Module
+
+↓
+
+Apache Web Server
+
+↓
+
+Apache Access Log
+
+↓
+
+Wazuh Agent
+
+↓
+
+Wazuh Manager
+
+↓
+
+Custom Detection Rule
+
+↓
+
+Security Investigation
+
+```
+
+---
+
+# Attack Procedure
+
+## Step 1
+
+Login to DVWA.
+
+---
+
+## Step 2
+
+Navigate to
+
+```
 
 DVWA → XSS (Reflected)
 
-3. Enter the payload:
+```
+
+---
+
+## Step 3
+
+The application asks:
+
+```
+
+What's your name?
+
+```
+
+Instead of entering normal text, the following payload was supplied:
 
 ```html
 <script>alert(1)</script>
 ```
 
-4. Click Submit.
+---
 
-A JavaScript alert box appeared, confirming that the payload executed.
+# Understanding the Payload
+
+```
+<script>
+```
+
+Starts a JavaScript block.
+
+```
+alert()
+```
+
+Displays a browser popup.
+
+```
+1
+```
+
+A harmless value proving JavaScript execution.
+
+```
+</script>
+```
+
+Ends the script block.
+
+This payload is commonly used during penetration testing because it safely demonstrates that JavaScript execution is possible.
+
+---
+
+# Result
+
+After clicking Submit, a browser popup displaying
+
+```
+1
+```
+
+appeared.
+
+This confirmed that:
+
+- User input was not sanitized.
+- JavaScript executed successfully.
+- The page was vulnerable to Reflected XSS.
 
 ---
 
 # Apache Log Evidence
 
-The request was recorded in:
+Apache recorded the request inside
 
 ```
 /var/log/apache2/other_vhosts_access.log
@@ -73,47 +184,57 @@ Example:
 GET /DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Ealert%281%29%3C%2Fscript%3E
 ```
 
+Notice that the payload is URL encoded.
+
+```
+<script>
+```
+
+becomes
+
+```
+%3Cscript%3E
+```
+
 ---
 
 # Detection Validation
 
-The payload was tested using:
+A custom Wazuh detection rule was developed and validated using
 
 ```
 sudo /var/ossec/bin/wazuh-logtest
 ```
 
+The Apache log containing the encoded payload was supplied to Logtest.
+
 Result:
 
 ```
+Rule ID: 100200
+
 Possible XSS attack detected
-```
 
-Severity
-
-```
-10
-```
-
-Status
-
-```
 Alert to be generated
 ```
 
----
-
-# Investigation
-
-The Apache logs confirmed the request.
-
-The payload successfully executed in DVWA.
-
-The detection logic was validated using Wazuh Logtest.
+This confirmed that the custom rule correctly identified the XSS payload before deployment.
 
 ---
 
-# MITRE ATT&CK
+# Investigation Process
+
+The investigation included:
+
+- Reviewing Apache access logs
+- Searching for encoded script payloads
+- Validating the custom rule using wazuh-logtest
+- Confirming successful payload execution
+- Reviewing the generated detection result
+
+---
+
+# MITRE ATT&CK Mapping
 
 | Technique | ID |
 |-----------|----|
@@ -121,16 +242,36 @@ The detection logic was validated using Wazuh Logtest.
 
 ---
 
+# Security Recommendations
+
+Cross-Site Scripting vulnerabilities can be mitigated through:
+
+- Output encoding
+- Input validation
+- Content Security Policy (CSP)
+- HTTPOnly cookies
+- Secure coding practices
+- Web Application Firewalls
+- Continuous security monitoring
+
+---
+
 # Skills Demonstrated
 
-- Apache log analysis
+This exercise demonstrated:
+
+- Reflected XSS exploitation
 - URL encoding analysis
-- Wazuh rule testing
-- Detection validation
+- Apache log analysis
+- Wazuh custom rule validation
 - Detection engineering
+- Threat hunting
+- Security investigation
 
 ---
 
 # Lessons Learned
 
-This exercise demonstrated how Wazuh can identify malicious web requests and how custom detection rules can be validated before deployment.
+This exercise demonstrated how a simple JavaScript payload can verify the presence of a Cross-Site Scripting vulnerability.
+
+Although the XSS payload did not generate a built-in Wazuh dashboard alert like the SQL Injection exercise, the custom detection rule was successfully validated using **wazuh-logtest**, demonstrating how detection engineering can be used to extend Wazuh's monitoring capabilities for web application attacks.
